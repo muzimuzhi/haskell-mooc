@@ -50,10 +50,16 @@ buildList start count end = start : buildList start (count-1) end
 -- Ps. you'll probably need a recursive helper function
 
 sums :: Int -> [Int]
-sums = iter 0 1 where
-    iter accu count n
-        | count > n = []
-        | otherwise = accu+count : iter (accu+count) (count+1) n
+-- the inner function "iter" could make use of the arg of "sums", hence
+sums i = iter 0 1 where
+    iter accu j
+        | j > i = []
+        | otherwise = accu+j : iter (accu+j) (j+1)
+
+-- sums = iter 0 1 where
+--     iter accu count n
+--         | count > n = []
+--         | otherwise = accu+count : iter (accu+count) (count+1) n
 
 ------------------------------------------------------------------------------
 -- Ex 3: define a function mylast that returns the last value of the
@@ -68,8 +74,9 @@ sums = iter 0 1 where
 
 mylast :: a -> [a] -> a
 mylast def [] = def
-mylast _ [x] = x
-mylast def (x:xs) = mylast def xs
+mylast _ (x:xs) = mylast x xs
+-- mylast _ [x] = x
+-- mylast def (x:xs) = mylast def xs
 
 ------------------------------------------------------------------------------
 -- Ex 4: safe list indexing. Define a function indexDefault so that
@@ -103,7 +110,7 @@ indexDefault (x:xs) i def = indexDefault xs (i-1) def
 sorted :: [Int] -> Bool
 sorted [] = True
 sorted [x] = True
-sorted [x,y] = x <= y
+-- sorted [x,y] = x <= y -- note in "(x:xs)", "xs" could be empty
 sorted (x:y:xs)
     | x <= y = sorted (y:xs)
     | otherwise = False
@@ -118,9 +125,9 @@ sorted (x:y:xs)
 -- Use pattern matching and recursion (and the list constructors : and [])
 
 sumsOf :: [Int] -> [Int]
-sumsOf = iter' 0 where
-    iter' accu [] = []
-    iter' accu (x:xs) = (accu+x) : iter' (accu+x) xs
+sumsOf = iter 0 where
+    iter accu [] = []
+    iter accu (x:xs) = (accu+x) : iter (accu+x) xs
 
 ------------------------------------------------------------------------------
 -- Ex 7: implement the function merge that merges two sorted lists of
@@ -136,7 +143,7 @@ merge :: [Int] -> [Int] -> [Int]
 merge [] ys = ys
 merge xs [] = xs
 merge (x:xs) (y:ys)
-    | x <= y = x : merge xs (y:ys)
+    | x < y = x : merge xs (y:ys)
     | otherwise = y : merge (x:xs) ys
 
 ------------------------------------------------------------------------------
@@ -173,9 +180,11 @@ mymaximum bigger initial (x:xs)
 -- Use recursion and pattern matching. Do not use any library functions.
 
 map2 :: (a -> b -> c) -> [a] -> [b] -> [c]
-map2 f [] bs = []
-map2 f as [] = []
+-- map2 f [] bs = []
+-- map2 f as [] = []
 map2 f (a:as) (b:bs) = f a b : map2 f as bs
+-- or write the base case at last, where at least one of them is empty list
+map2 f _ _ = []
 
 ------------------------------------------------------------------------------
 -- Ex 10: implement the function maybeMap, which works a bit like a
@@ -200,6 +209,10 @@ map2 f (a:as) (b:bs) = f a b : map2 f as bs
 
 maybeMap :: (a -> Maybe b) -> [a] -> [b]
 maybeMap f [] = []
-maybeMap f (x:xs) = maybeMap' (f x) xs where
-    maybeMap' Nothing xs = maybeMap f xs
-    maybeMap' (Just x) xs = x : maybeMap f xs
+-- use case-of expression to handle "Maybe" value
+maybeMap f (x:xs) = case f x of
+    Nothing -> maybeMap f xs
+    (Just b) -> b : maybeMap f xs
+-- maybeMap f (x:xs) = maybeMap' (f x) xs where
+    -- maybeMap' Nothing xs = maybeMap f xs
+    -- maybeMap' (Just x) xs = x : maybeMap f xs
