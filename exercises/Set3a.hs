@@ -57,9 +57,10 @@ mapMaybe f (Just b) = Just $ f b
 --   mapMaybe2 div (Just 6) Nothing   ==>  Nothing
 
 mapMaybe2 :: (a -> b -> c) -> Maybe a -> Maybe b -> Maybe c
-mapMaybe2 _ Nothing _ = Nothing
-mapMaybe2 _ _ Nothing = Nothing
+-- mapMaybe2 _ Nothing _ = Nothing
+-- mapMaybe2 _ _ Nothing = Nothing
 mapMaybe2 f (Just a) (Just b) = Just $ f a b
+mapMaybe2 _ _ _ = Nothing
 
 ------------------------------------------------------------------------------
 -- Ex 4: define the functions firstHalf and palindrome so that
@@ -82,10 +83,11 @@ palindromeHalfs :: [String] -> [String]
 palindromeHalfs xs = map firstHalf (filter palindrome xs)
 
 firstHalf :: [a] -> [a]
-firstHalf xs = take half xs
-  where
-    len = length xs
-    half = (len + len `mod` 2) `div` 2
+firstHalf xs = take ((length xs + 1) `div` 2) xs
+-- firstHalf xs = take half xs
+--   where
+--     len = length xs
+--     half = (len + len `mod` 2) `div` 2
 
 palindrome :: String -> Bool
 palindrome str = reverse str == str
@@ -106,7 +108,7 @@ palindrome str = reverse str == str
 --   capitalize "goodbye cruel world" ==> "Goodbye Cruel World"
 
 capitalize :: String -> String
-capitalize = unwords . map (\(x:xs) -> toUpper x : xs) . words
+capitalize = unwords . map (\ (x:xs) -> toUpper x : xs) . words
 
 ------------------------------------------------------------------------------
 -- Ex 6: powers k max should return all the powers of k that are less
@@ -123,10 +125,11 @@ capitalize = unwords . map (\(x:xs) -> toUpper x : xs) . words
 --   * the function takeWhile
 
 powers :: Int -> Int -> [Int]
-powers k max = takeWhile (<=max) . powers' 1 $ k
-  where
-    -- "powers'" generates an infinite list [1, k, k^2, k^3, ...]
-    powers' prod k = prod : powers' (prod * k) k
+powers k max = takeWhile (<=max) . map (k^) $ [0..]
+-- powers k max = takeWhile (<=max) . powers' 1 $ k
+--   where
+--     -- "powers'" generates an infinite list [1, k, k^2, k^3, ...]
+--     powers' prod k = prod : powers' (prod * k) k
 
 ------------------------------------------------------------------------------
 -- Ex 7: implement a functional while loop. While should be a function
@@ -168,9 +171,12 @@ while check update value
 --   whileRight (step 1000) 3  ==> 1536
 
 whileRight :: (a -> Either b a) -> a -> b
-whileRight f x = while' $ f x where
-    while' (Left b) = b
-    while' (Right a) = whileRight f a
+whileRight f x = case f x of
+    Left b -> b
+    Right a -> whileRight f a
+-- whileRight f x = while' $ f x where
+--     while' (Left b) = b
+--     while' (Right a) = whileRight f a
 
 -- for the whileRight examples:
 -- step k x doubles x if it's less than k
@@ -189,7 +195,7 @@ step k x = if x<k then Right (2*x) else Left x
 -- Hint! This is a great use for list comprehensions
 
 joinToLength :: Int -> [String] -> [String]
-joinToLength n strings = [x ++ y | x <- strings, y <- strings, length x + length y == n]
+joinToLength n xs = [z | x <- xs, y <- xs, let z = x ++ y, length z == n]
 
 ------------------------------------------------------------------------------
 -- Ex 10: implement the operator +|+ that returns a list with the first
@@ -207,6 +213,8 @@ joinToLength n strings = [x ++ y | x <- strings, y <- strings, length x + length
 [] +|+ [] = []
 [] +|+ (y:ys) = [y]
 (x:xs) +|+ ys = x : [] +|+ ys
+-- or (because "take 1 [] == []")
+-- xs +|+ ys = take 1 xs : take 1 ys
 
 ------------------------------------------------------------------------------
 -- Ex 11: remember the lectureParticipants example from Lecture 2? We
@@ -244,6 +252,13 @@ multiCompose fs x = foldr (\ f x -> f x) x fs
 -- multiCompose [] x = x
 -- multiCompose (f:fs) x = f . multiCompose fs $ x
 
+{-
+or "multiCompose = foldr (.) id", which folds the "fs" to "f1 . f2 . f3 . id"
+
+    foldr (.) id [f1,f2,..,fn] x
+==> f1 . f2 . .. . fn . id $ x
+-}
+
 ------------------------------------------------------------------------------
 -- Ex 13: let's consider another way to compose multiple functions. Given
 -- some function f, a list of functions gs, and some value x, define
@@ -262,6 +277,7 @@ multiCompose fs x = foldr (\ f x -> f x) x fs
 --   multiApp concat [take 3, reverse] "race" ==> "racecar"
 
 multiApp :: ([b] -> c) -> [a -> b] -> a -> c
+-- "(\f -> f x)", "((\ f x -> f x) x)", "(`id` x)", and "($ x)" are equivalent
 multiApp f gs x = f . map (`id` x) $ gs
 -- multiApp f gs = f . multiApp' gs where
 --     multiApp' [] x = []
