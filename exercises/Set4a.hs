@@ -36,8 +36,9 @@ import Data.Array
 
 allEqual :: Eq a => [a] -> Bool
 allEqual [] = True
-allEqual [x] = True
-allEqual (x:y:xs) = x == y && allEqual (y:xs)
+allEqual (x:xs) = all (==x) xs
+-- allEqual [x] = True
+-- allEqual (x:y:xs) = x == y && allEqual (y:xs)
 
 ------------------------------------------------------------------------------
 -- Ex 2: implement the function distinct which returns True if all
@@ -52,9 +53,10 @@ allEqual (x:y:xs) = x == y && allEqual (y:xs)
 --   distinct [1,2] ==> True
 
 distinct :: Eq a => [a] -> Bool
-distinct [] = True
-distinct [x] = True
-distinct (x:xs) = null (dropWhile (/=x) xs) && distinct xs
+distinct xs = xs == nub xs
+-- distinct [] = True
+-- distinct [x] = True
+-- distinct (x:xs) = null (dropWhile (/=x) xs) && distinct xs
 
 ------------------------------------------------------------------------------
 -- Ex 3: implement the function middle that returns the middle value
@@ -68,9 +70,11 @@ distinct (x:xs) = null (dropWhile (/=x) xs) && distinct xs
 --   middle 1 7 3        ==> 3
 
 middle :: Ord a => a -> a -> a -> a
-middle x y z = if x < y
-    then if y < z then y else maximum [x, z]
-    else middle y x z
+-- middle x y z = if x < y
+--     then if y < z then y else maximum [x, z]
+--     else middle y x z
+-- or
+middle x y z = sort [x, y, z] !! 1
 
 ------------------------------------------------------------------------------
 -- Ex 4: return the range of an input list, that is, the difference
@@ -104,11 +108,17 @@ rangeOf xs = maximum xs - minimum xs
 --   longest ["bcd","def","ab"] ==> "bcd"
 
 longest :: (Ord a) => [[a]] -> [a]
-longest = maximumBy
-    (\ x y -> case compare (length x) (length y) of
-        EQ -> if head x < head y then GT else LT
-        a -> a
-    )
+{-
+sortBy (comparing f) == sortOn f
+reverse . sortBy f == sortOn (Down . head)
+last . sortBy f == maximumBy f
+-}
+longest = maximumBy (comparing length) . sortOn (Down . head)
+-- longest = maximumBy
+--     (\ x y -> case compare (length x) (length y) of
+--         EQ -> if head x < head y then GT else LT
+--         a -> a
+--     )
 
 ------------------------------------------------------------------------------
 -- Ex 6: Implement the function incrementKey, that takes a list of
@@ -159,12 +169,11 @@ average xs = sum xs / fromIntegral (length xs)
 --     ==> "Lisa"
 
 winner :: Map.Map String Int -> String -> String -> String
-winner scores player1 player2 = case compare score1 score2 of
-  LT -> player2
-  a -> player1
+winner scores player1 player2
+  | score player1 < score player2 = player2
+  | otherwise = player1
   where
-    score1 = Map.findWithDefault 0 player1 scores
-    score2 = Map.findWithDefault 0 player2 scores
+    score player = Map.findWithDefault 0 player scores
 
 ------------------------------------------------------------------------------
 -- Ex 9: compute how many times each value in the list occurs. Return
@@ -180,8 +189,11 @@ winner scores player1 player2 = case compare score1 score2 of
 
 freqs :: (Eq a, Ord a) => [a] -> Map.Map a Int
 freqs = foldr (Map.alter update) Map.empty where
-    update Nothing = Just 1
-    update (Just x) = Just (x+1)
+    update = Just . maybe 1 (+1)
+    -- update Nothing = Just 1
+    -- update (Just x) = Just (x+1)
+-- or
+-- freqs = foldr (Map.alter $ Just . maybe 1 (+1)) Map.empty
 
 ------------------------------------------------------------------------------
 -- Ex 10: recall the withdraw example from the course material. Write a
@@ -209,12 +221,12 @@ freqs = foldr (Map.alter update) Map.empty where
 --     ==> fromList [("Bob",100),("Mike",50)]
 
 transfer :: String -> String -> Int -> Map.Map String Int -> Map.Map String Int
-transfer from to amount bank = case Map.lookup from bank of
-  Nothing -> bank
-  Just bankFrom ->
-    if Map.lookup to bank /= Nothing && amount >= 0 && bankFrom >= amount
-      then Map.adjust (+ amount) to (Map.adjust (subtract amount) from bank)
-      else bank
+transfer from to amount bank = case (Map.lookup from bank, Map.lookup to bank) of
+  (Just bankFrom, Just bankTo)
+    -- guarded definition could have no "otherwise"
+    | amount >= 0 && bankFrom >= amount ->
+      Map.adjust (+ amount) to (Map.adjust (subtract amount) from bank)
+  _ -> bank
 
 ------------------------------------------------------------------------------
 -- Ex 11: given an Array and two indices, swap the elements in the indices.
@@ -237,7 +249,9 @@ swap i j arr = arr // [(i, aj), (j, ai)] where
 -- Hint: check out Data.Array.indices or Data.Array.assocs
 
 maxIndex :: (Ix i, Ord a) => Array i a -> i
-maxIndex arr = fst . foldr getMax arrHead $ assocs arr where
-    bound = fst (bounds arr)
-    arrHead = (bound, arr ! bound)
-    getMax (i, a) (j, b) = if a > b then (i, a) else (j, b)
+-- "maximumBy" uses a "foldl1" so it's linear too
+maxIndex arr = fst . maximumBy (\ (_, x) (_, y) -> compare x y) $ assocs arr 
+-- maxIndex arr = fst . foldr getMax arrHead $ assocs arr where
+--     bound = fst (bounds arr)
+--     arrHead = (bound, arr ! bound)
+--     getMax (i, a) (j, b) = if a > b then (i, a) else (j, b)

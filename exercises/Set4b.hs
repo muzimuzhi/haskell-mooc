@@ -38,7 +38,8 @@ myMaximum [] = 0
 myMaximum (x:xs) = foldr maxHelper x xs
 
 maxHelper :: Int -> Int -> Int
-maxHelper x accu = if x > accu then x else accu
+maxHelper = max
+-- maxHelper x accu = if x > accu then x else accu
 
 ------------------------------------------------------------------------------
 -- Ex 3: compute the sum and length of a list with a fold. Define
@@ -77,7 +78,8 @@ concatStart :: [a]
 concatStart = []
 
 concatHelper :: [a] -> [a] -> [a]
-concatHelper x accu = x ++ accu
+concatHelper = (++)
+-- concatHelper x accu = x ++ accu
 
 ------------------------------------------------------------------------------
 -- Ex 5: get all occurrences of the largest number in a list with a
@@ -93,10 +95,14 @@ largest = foldr largestHelper []
 
 largestHelper :: Int -> [Int] -> [Int]
 largestHelper x [] = [x]
-largestHelper x (y:ys) = case compare x y of
-    LT -> y:ys
-    EQ -> x:y:ys
-    GT -> largestHelper x ys
+largestHelper x (y:ys)
+    | x < y = y:ys
+    | x == y = x:y:ys
+    | otherwise = [x] -- x > y, drop the whole "y:ys"
+-- largestHelper x (y:ys) = case compare x y of
+--     LT -> y:ys
+--     EQ -> x:y:ys
+--     GT -> largestHelper x ys
 
 
 ------------------------------------------------------------------------------
@@ -126,9 +132,8 @@ headHelper x _ = Just x
 --   myLast [1,2,3] ==> Just 3
 
 myLast :: [a] -> Maybe a
-myLast xs = foldr lastHelper Nothing xs
+myLast = foldr lastHelper Nothing
 
 lastHelper :: a -> Maybe a -> Maybe a
 lastHelper x Nothing = Just x
 lastHelper _ accu = accu
-
