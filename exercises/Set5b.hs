@@ -66,7 +66,7 @@ allValues condition (Node n l r) =
 --   ==> (Node 2 (Node 3 Empty Empty) (Node 4 Empty Empty))
 
 mapTree :: (a -> b) -> Tree a -> Tree b
-mapTree f Empty = Empty
+mapTree _ Empty = Empty
 mapTree f (Node n l r) = Node (f n) (mapTree f l) (mapTree f r)
 
 ------------------------------------------------------------------------------
@@ -158,11 +158,10 @@ cull val (Node n l r)
 
 isOrdered :: Ord a => Tree a -> Bool
 isOrdered Empty = True
-isOrdered (Node n l r) = case (l, r) of
-    (Empty, Empty) -> True
-    (Node nl _ _, Empty) -> nl < n && isOrdered l
-    (Empty, Node nr _ _) -> n < nr && isOrdered r
-    (Node nl _ _, Node nr _ _) -> nl < n && n < nr && isOrdered l && isOrdered r
+isOrdered (Node n l r) =
+    rootValue (<n) l && rootValue (>n) r && isOrdered l && isOrdered r where
+        rootValue _ Empty = True
+        rootValue prec (Node n' _ _) = prec n'
 
 ------------------------------------------------------------------------------
 -- Ex 8: a path in a tree can be represented as a list of steps that
@@ -181,8 +180,8 @@ data Step = StepL | StepR
 --   walk [StepL,StepL] (Node 1 (Node 2 Empty Empty) Empty)  ==>  Nothing
 
 walk :: [Step] -> Tree a -> Maybe a
-walk _ Empty = Nothing
-walk [] (Node n _ _) = Just n
+walk _          Empty        = Nothing
+walk []         (Node n _ _) = Just n
 walk (StepL:xs) (Node _ l _) = walk xs l
 walk (StepR:xs) (Node _ _ r) = walk xs r
 
@@ -206,8 +205,8 @@ walk (StepR:xs) (Node _ _ r) = walk xs r
 
 set :: [Step] -> a -> Tree a -> Tree a
 -- set path val tree = todo
-set _ _ Empty = Empty
-set [] val (Node n l r) = Node val l r
+set _          _   Empty        = Empty
+set []         val (Node _ l r) = Node val l r
 set (StepL:xs) val (Node n l r) = Node n (set xs val l) r
 set (StepR:xs) val (Node n l r) = Node n l (set xs val r)
 

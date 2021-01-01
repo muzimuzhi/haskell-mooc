@@ -70,7 +70,7 @@ data Person = Person Int String
 
 -- fred is a person whose name is Fred and age is 90
 fred :: Person
-fred = Person 18 "Fred"
+fred = Person 90 "Fred"
 
 -- getName returns the name of the person
 getName :: Person -> String
@@ -272,7 +272,7 @@ toNat :: Int -> Maybe Nat
 toNat z
   | z < 0 = Nothing
   | z == 0 = Just Zero
-  | otherwise = (\ (Just nat) -> Just (PlusOne nat)) (toNat (z -1))
+  | otherwise = (\ (Just nat) -> Just (PlusOne nat)) (toNat (z-1))
 
 ------------------------------------------------------------------------------
 -- Ex 12: While pleasingly simple in its definition, the Nat datatype is not
@@ -332,15 +332,25 @@ inc (O b) = I b
 inc (I b) = O (inc b)
 
 prettyPrint :: Bin -> String
-prettyPrint End = ""
-prettyPrint (O b) = prettyPrint b ++ "0"
-prettyPrint (I b) = prettyPrint b ++ "1"
+prettyPrint = prettyPrint' "" where
+    prettyPrint' s End = s
+    prettyPrint' s (O b) = prettyPrint' ('0':s) b
+    prettyPrint' s (I b) = prettyPrint' ('1':s) b
+-- prettyPrint End = ""
+-- prettyPrint (O b) = prettyPrint b ++ "0"
+-- prettyPrint (I b) = prettyPrint b ++ "1"
 
 fromBin :: Bin -> Int
 fromBin = fromBin' 0 1 where
     fromBin' n _ End = n
     fromBin' n base (O b) = fromBin' n (base*2) b
     fromBin' n base (I b) = fromBin' (n+base) (base*2) b
+-- or, recursively
+{-
+fromBin End = 0
+fromBin (O b) = 2 * fromBin b
+fromBin (I b) = 2 * fromBin b + 1
+-}
 
 toBin :: Int -> Bin
 toBin n
@@ -348,3 +358,4 @@ toBin n
     | n == 1 = I End
     | even n = O (toBin (n `div` 2))
     | otherwise = I (toBin (n `div` 2))
+-- or, implemented with "foldr"
