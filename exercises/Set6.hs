@@ -25,13 +25,11 @@ instance Eq Country where
 -- Remember minimal complete definitions!
 
 instance Ord Country where
---   compare = todo -- implement me?
-  Finland <= Norway = True -- and me?
+  -- implement "(<=)"
+  Finland <= Norway = True
   Finland <= Switzerland = True
   Norway <= Switzerland = True
   c1 <= c2 = c1 == c2
---   min = todo -- and me?
---   max = todo -- and me?
 
 ------------------------------------------------------------------------------
 -- Ex 3: Implement an Eq instance for the type Name which contains a String.
@@ -45,7 +43,8 @@ instance Ord Country where
 
 data Name = Name String
   deriving Show
--- or use "newtype"
+-- or simply
+-- newtype Name = Name String deriving Show
 
 instance Eq Name where
   Name n1 == Name n2 = map toLower n1 == map toLower n2
@@ -83,7 +82,8 @@ data Egg = ChickenEgg | ChocolateEgg
   deriving Show
 data Milk = Milk Int -- amount in litres
   deriving Show
--- or use "newtype"
+-- or simply
+-- newtype Milk = Mile Int deriving Show
 
 class Price a where
     price :: a -> Int
@@ -110,6 +110,8 @@ instance Price a => Price (Maybe a) where
 instance Price a => Price [a] where
     price [] = 0
     price (x:xs) = price x + price xs
+    -- or use "map"
+    -- price = sum . map price
 
 ------------------------------------------------------------------------------
 -- Ex 7: below you'll find the datatype Number, which is either an
@@ -197,14 +199,21 @@ simplify (RationalNumber num denom) =
 instance Num RationalNumber where
   RationalNumber n1 d1 + RationalNumber n2 d2 = 
       simplify $ RationalNumber (n1 * d2 + n2 * d1) (d1 * d2)
+
   RationalNumber n1 d1 * RationalNumber n2 d2 =
       simplify $ RationalNumber (n1 * n2) (d1 * d2)
-  abs (RationalNumber n d) =
-      simplify $ RationalNumber (abs n) (abs d)
+
+  -- use as-pattern var@pattern
+  abs r@(RationalNumber n d)
+      | n < 0 || d < 0 = RationalNumber (-n) d
+      | otherwise = r
+
   signum (RationalNumber 0 _) = 0
   signum q = if abs q == q then 1 else -1
-  fromInteger x = simplify $ RationalNumber x 1
-  negate (RationalNumber n d) = simplify $ RationalNumber (-n) d
+
+  fromInteger x = RationalNumber x 1
+
+  negate (RationalNumber n d) = RationalNumber (-n) d
 
 ------------------------------------------------------------------------------
 -- Ex 11: a class for adding things. Define a class Addable with a
