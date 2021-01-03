@@ -26,11 +26,11 @@ data Velocity = Velocity Double
 
 -- velocity computes a velocity given a distance and a time
 velocity :: Distance -> Time -> Velocity
-velocity = todo
+velocity (Distance d) (Time t) = Velocity $ d / t
 
 -- travel computes a distance given a velocity and a time
 travel :: Velocity -> Time -> Distance
-travel = todo
+travel (Velocity v) (Time t) = Distance $ v * t
 
 ------------------------------------------------------------------------------
 -- Ex 2: let's implement a simple Set datatype. A Set is a list of
@@ -49,15 +49,20 @@ data Set a = Set [a]
 
 -- emptySet is a set with no elements
 emptySet :: Set a
-emptySet = todo
+emptySet = Set []
 
 -- member tests if an element is in a set
 member :: Eq a => a -> Set a -> Bool
-member = todo
+member _ (Set []) = False
+member e (Set (x:xs)) = e == x || member e (Set xs)
 
 -- add a member to a set
-add :: a -> Set a -> Set a
-add = todo
+add :: (Eq a, Ord a) => a -> Set a -> Set a
+add e (Set []) = Set [e]
+add e (Set set@(x:xs))
+    | e < x = Set (e:set)
+    | e == x = Set set
+    | otherwise = case add e (Set xs) of Set b -> Set (x:b)
 
 ------------------------------------------------------------------------------
 -- Ex 3: a state machine for baking a cake. The type Event represents
@@ -92,10 +97,25 @@ add = todo
 data Event = AddEggs | AddFlour | AddSugar | Mix | Bake
   deriving (Eq,Show)
 
-data State = Start | Error | Finished
+data State = Start | Error | Finished 
+    | WithEggs 
+    | WithEggsAndFlour 
+    | WithEggsAndSuger
+    | WithAll
+    | Mixed
   deriving (Eq,Show)
 
-step = todo
+step :: State -> Event -> State
+step Start AddEggs = WithEggs
+step WithEggs AddFlour = WithEggsAndFlour
+step WithEggsAndFlour AddSugar = WithAll
+step WithEggs AddSugar = WithEggsAndSuger
+step WithEggsAndSuger AddFlour = WithAll
+step WithAll Mix = Mixed
+step Mixed Bake = Finished
+step Finished _ = Finished
+step Error _ = Error
+step _ _ = Error
 
 -- do not edit this
 bake :: [Event] -> State
@@ -113,13 +133,17 @@ bake events = go Start events
 --   average (1.0 :| [2.0,3.0])  ==>  2.0
 
 average :: Fractional a => NonEmpty a -> a
-average = todo
+average (x :| []) = x
+average (x :| xs) = sum list / fromIntegral (length list) where
+    list = x:xs
 
 ------------------------------------------------------------------------------
 -- Ex 5: reverse a NonEmpty list.
 
 reverseNonEmpty :: NonEmpty a -> NonEmpty a
-reverseNonEmpty = todo
+reverseNonEmpty (x :| []) = x :| []
+reverseNonEmpty (x :| xs) = case reverse (x:xs) of
+    (y:ys) -> y :| ys
 
 ------------------------------------------------------------------------------
 -- Ex 6: implement Semigroup instances for the Distance, Time and
@@ -131,6 +155,14 @@ reverseNonEmpty = todo
 -- velocity (Distance 50 <> Distance 10) (Time 1 <> Time 2)
 --    ==> Velocity 20
 
+instance Semigroup Distance where
+    Distance d1 <> Distance d2 = Distance (d1 + d2)
+
+instance Semigroup Time where
+    Time t1 <> Time t2 = Time (t1 + t2)
+
+instance Semigroup Velocity where
+    Velocity v1 <> Velocity v2 = Velocity (v1 + v2)
 
 ------------------------------------------------------------------------------
 -- Ex 7: implement a Monoid instance for the Set type from exercise 2.
@@ -140,6 +172,12 @@ reverseNonEmpty = todo
 --
 -- What are the class constraints for the instances?
 
+instance (Eq a, Ord a) => Semigroup (Set a) where
+    s1 <> Set [] = s1
+    s1 <> Set (x:xs) = add x s1 <> Set xs
+
+instance (Eq a, Ord a) => Monoid (Set a) where
+    mempty = Set []
 
 ------------------------------------------------------------------------------
 -- Ex 8: below you'll find two different ways of representing
@@ -162,29 +200,40 @@ reverseNonEmpty = todo
 
 data Operation1 = Add1 Int Int
                 | Subtract1 Int Int
+                | Multiply1 Int Int
   deriving Show
 
 compute1 :: Operation1 -> Int
 compute1 (Add1 i j) = i+j
 compute1 (Subtract1 i j) = i-j
+compute1 (Multiply1 i j) = i*j
 
 show1 :: Operation1 -> String
-show1 = todo
+show1 (Add1 i j) = show i ++ "+" ++ show j
+show1 (Subtract1 i j) = show i ++ "-" ++ show j
+show1 (Multiply1 i j) = show i ++ "*" ++ show j
 
 data Add2 = Add2 Int Int
   deriving Show
 data Subtract2 = Subtract2 Int Int
   deriving Show
+data Multiply2 = Multiply2 Int Int
 
 class Operation2 op where
   compute2 :: op -> Int
+  show2 :: op -> String
 
 instance Operation2 Add2 where
   compute2 (Add2 i j) = i+j
+  show2 (Add2 i j) = show i ++ "+" ++ show j
 
 instance Operation2 Subtract2 where
   compute2 (Subtract2 i j) = i-j
+  show2 (Subtract2 i j) = show i ++ "-" ++ show j
 
+instance Operation2 Multiply2 where
+  compute2 (Multiply2 i j) = i * j
+  show2 (Multiply2 i j) = show i ++ "*" ++ show j
 
 ------------------------------------------------------------------------------
 -- Ex 9: validating passwords. Below you'll find a type
@@ -204,16 +253,23 @@ instance Operation2 Subtract2 where
 --   passwordAllowed "p4ss" (And (ContainsSome "1234") (MinimumLength 5)) ==> False
 --   passwordAllowed "p4ss" (Or (ContainsSome "1234") (MinimumLength 5)) ==> True
 
-data PasswordRequirement =
-  MinimumLength Int
-  | ContainsSome String    -- contains at least one of given characters
-  | DoesNotContain String  -- does not contain any of the given characters
+data PasswordRequirement
+  = MinimumLength Int
+  | ContainsSome String -- contains at least one of given characters
+  | DoesNotContain String -- does not contain any of the given characters
   | And PasswordRequirement PasswordRequirement -- and'ing two requirements
-  | Or PasswordRequirement PasswordRequirement  -- or'ing
-  deriving Show
+  | Or PasswordRequirement PasswordRequirement -- or'ing
+  deriving (Show)
 
 passwordAllowed :: String -> PasswordRequirement -> Bool
-passwordAllowed = todo
+passwordAllowed pswd (MinimumLength len) = length pswd >= len
+passwordAllowed pswd (ContainsSome must) = not . null $ intersect pswd must
+passwordAllowed pswd (DoesNotContain mustNot) =
+    null $ intersect pswd mustNot
+passwordAllowed pswd (And pr1 pr2) =
+    passwordAllowed pswd pr1 && passwordAllowed pswd pr2
+passwordAllowed pswd (Or pr1 pr2) =
+    passwordAllowed pswd pr1 || passwordAllowed pswd pr2
 
 ------------------------------------------------------------------------------
 -- Ex 10: a DSL for simple arithmetic expressions with addition and
@@ -235,17 +291,23 @@ passwordAllowed = todo
 --     ==> "(3*(1+1))"
 --
 
-data Arithmetic = Todo
+data Arithmetic = Operand Integer
+                | Expression String Arithmetic Arithmetic
   deriving Show
 
 literal :: Integer -> Arithmetic
-literal = todo
+literal = Operand
 
 operation :: String -> Arithmetic -> Arithmetic -> Arithmetic
-operation = todo
+operation = Expression
+-- operation "*" (Operand e1) (Operand e2) = Operand $ e1 * e2
 
 evaluate :: Arithmetic -> Integer
-evaluate = todo
+evaluate (Operand e) = e
+evaluate (Expression "+" a1 a2) = evaluate a1 + evaluate a2
+evaluate (Expression "*" a1 a2) = evaluate a1 * evaluate a2
 
 render :: Arithmetic -> String
-render = todo
+render (Operand e) = show e
+render (Expression "+" a1 a2) = "(" ++ render a1 ++ "+" ++ render a2 ++ ")"
+render (Expression "*" a1 a2) = "(" ++ render a1 ++ "*" ++ render a2 ++ ")"
