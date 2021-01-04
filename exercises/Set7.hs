@@ -53,16 +53,19 @@ emptySet = Set []
 
 -- member tests if an element is in a set
 member :: Eq a => a -> Set a -> Bool
-member _ (Set []) = False
-member e (Set (x:xs)) = e == x || member e (Set xs)
+member e (Set xs) = e `elem` xs
+-- member _ (Set []) = False
+-- member e (Set (x:xs)) = e == x || member e (Set xs)
 
 -- add a member to a set
 add :: (Eq a, Ord a) => a -> Set a -> Set a
-add e (Set []) = Set [e]
-add e (Set set@(x:xs))
-    | e < x = Set (e:set)
-    | e == x = Set set
-    | otherwise = case add e (Set xs) of Set b -> Set (x:b)
+add e (Set xs) = Set $ go e xs where
+    -- this unboxs "Set xs" only once
+    go e [] = [e]
+    go e set@(x:xs)
+        | e < x = e:x:xs
+        | e == x = set
+        | otherwise = x : go e xs
 
 ------------------------------------------------------------------------------
 -- Ex 3: a state machine for baking a cake. The type Event represents
@@ -114,7 +117,7 @@ step WithEggsAndSuger AddFlour = WithAll
 step WithAll Mix = Mixed
 step Mixed Bake = Finished
 step Finished _ = Finished
-step Error _ = Error
+-- step Error _ = Error
 step _ _ = Error
 
 -- do not edit this
@@ -133,17 +136,19 @@ bake events = go Start events
 --   average (1.0 :| [2.0,3.0])  ==>  2.0
 
 average :: Fractional a => NonEmpty a -> a
-average (x :| []) = x
-average (x :| xs) = sum list / fromIntegral (length list) where
-    list = x:xs
+-- average (x :| []) = x
+average (x :| xs) = (x + sum xs) / (1 + fromIntegral (length xs))
 
 ------------------------------------------------------------------------------
 -- Ex 5: reverse a NonEmpty list.
 
 reverseNonEmpty :: NonEmpty a -> NonEmpty a
-reverseNonEmpty (x :| []) = x :| []
-reverseNonEmpty (x :| xs) = case reverse (x:xs) of
-    (y:ys) -> y :| ys
+reverseNonEmpty (x :| xs) = case reverse xs of
+    [] -> x :| []
+    (y:ys) -> y :| (ys ++ [x])
+-- reverseNonEmpty (x :| []) = x :| []
+-- reverseNonEmpty (x :| xs) = case reverse (x:xs) of
+--     (y:ys) -> y :| ys
 
 ------------------------------------------------------------------------------
 -- Ex 6: implement Semigroup instances for the Distance, Time and
@@ -173,8 +178,9 @@ instance Semigroup Velocity where
 -- What are the class constraints for the instances?
 
 instance (Eq a, Ord a) => Semigroup (Set a) where
-    s1 <> Set [] = s1
-    s1 <> Set (x:xs) = add x s1 <> Set xs
+    set1 <> Set s = foldr add set1 s
+    -- s1 <> Set [] = s1
+    -- s1 <> Set (x:xs) = add x s1 <> Set xs
 
 instance (Eq a, Ord a) => Monoid (Set a) where
     mempty = Set []
@@ -218,6 +224,7 @@ data Add2 = Add2 Int Int
 data Subtract2 = Subtract2 Int Int
   deriving Show
 data Multiply2 = Multiply2 Int Int
+  deriving Show
 
 class Operation2 op where
   compute2 :: op -> Int
@@ -263,9 +270,10 @@ data PasswordRequirement
 
 passwordAllowed :: String -> PasswordRequirement -> Bool
 passwordAllowed pswd (MinimumLength len) = length pswd >= len
-passwordAllowed pswd (ContainsSome must) = not . null $ intersect pswd must
+passwordAllowed pswd (ContainsSome must) = any (`elem` must)  pswd
+-- passwordAllowed pswd (ContainsSome must) = not . null $ intersect pswd must
 passwordAllowed pswd (DoesNotContain mustNot) =
-    null $ intersect pswd mustNot
+    not $ passwordAllowed pswd (ContainsSome mustNot)
 passwordAllowed pswd (And pr1 pr2) =
     passwordAllowed pswd pr1 && passwordAllowed pswd pr2
 passwordAllowed pswd (Or pr1 pr2) =
@@ -292,22 +300,24 @@ passwordAllowed pswd (Or pr1 pr2) =
 --
 
 data Arithmetic = Operand Integer
-                | Expression String Arithmetic Arithmetic
+                | Plus Arithmetic Arithmetic
+                | Times Arithmetic Arithmetic
   deriving Show
 
 literal :: Integer -> Arithmetic
 literal = Operand
 
 operation :: String -> Arithmetic -> Arithmetic -> Arithmetic
-operation = Expression
+operation "+" = Plus
+operation "*" = Times
 -- operation "*" (Operand e1) (Operand e2) = Operand $ e1 * e2
 
 evaluate :: Arithmetic -> Integer
 evaluate (Operand e) = e
-evaluate (Expression "+" a1 a2) = evaluate a1 + evaluate a2
-evaluate (Expression "*" a1 a2) = evaluate a1 * evaluate a2
+evaluate (Plus a1 a2) = evaluate a1 + evaluate a2
+evaluate (Times a1 a2) = evaluate a1 * evaluate a2
 
 render :: Arithmetic -> String
 render (Operand e) = show e
-render (Expression "+" a1 a2) = "(" ++ render a1 ++ "+" ++ render a2 ++ ")"
-render (Expression "*" a1 a2) = "(" ++ render a1 ++ "*" ++ render a2 ++ ")"
+render (Plus a1 a2) = "(" ++ render a1 ++ "+" ++ render a2 ++ ")"
+render (Times a1 a2) = "(" ++ render a1 ++ "*" ++ render a2 ++ ")"
