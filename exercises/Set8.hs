@@ -245,7 +245,9 @@ rectangle x0 y0 w h = Shape f
     f (Coord x y) =
       let x' = x-x0
           y' = y-y0
+      -- or "and [cond1, cond2, ...]"
        in 0 <= x' && x' < w && 0 <= y' && y' < h
+
 ------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
@@ -404,6 +406,7 @@ xy = Picture f
 data Fill = Fill Color
 
 instance Transform Fill where
+  -- or " = solid color"
   apply (Fill color) _Picture = Picture (const color)
 
 data Zoom = Zoom Int
@@ -479,16 +482,18 @@ instance Transform Blur where
   apply Blur (Picture f) = Picture blur
     where
       blur :: Coord -> Color
-      blur (Coord x y) =
-        mapColor (`div` 5)
-          . foldr addColor (Color 0 0 0)
-          $ xy x y
-      mapColor f (Color r g b) = Color (f r) (f g) (f b)
-      addColor (Color r1 g1 b1) (Color r2 g2 b2) =
-        Color (r1 + r2) (g1 + g2) (b1 + b2)
-      xy :: Int -> Int -> [Color]
-      xy x y = [xy' 0 0, xy' 1 0, xy' (-1) 0, xy' 0 1, xy' 0 (-1)] where
-        xy' dx dy = f (Coord (x+dx) (y+dy))
+      blur = avg . map f . neighbours
+    --   mapColor f (Color r g b) = Color (f r) (f g) (f b)
+    --   addColor (Color r1 g1 b1) (Color r2 g2 b2) =
+        -- Color (r1 + r2) (g1 + g2) (b1 + b2)
+      avg :: [Color] -> Color
+      avg colors = let n = length colors
+                       avg' :: (Color -> Int) -> Int
+                       avg' getter = (sum . map getter $ colors) `div` n
+                   in Color (avg' getRed) (avg' getGreen) (avg' getBlue)
+      neighbours :: Coord -> [Coord]
+      neighbours (Coord x y) = [xy' 0 0, xy' 1 0, xy' (-1) 0, xy' 0 1, xy' 0 (-1)] where
+        xy' dx dy = Coord (x+dx) (y+dy)
 
 ------------------------------------------------------------------------------
 
@@ -507,8 +512,8 @@ data BlurMany = BlurMany Int
   deriving Show
 
 instance Transform BlurMany where
-  apply (BlurMany 0) picture = picture
-  apply (BlurMany n) picture = apply (BlurMany (n-1)) . apply Blur $ picture
+  apply (BlurMany 0) = id
+  apply (BlurMany n) = apply (BlurMany (n-1)) . apply Blur
 
 ------------------------------------------------------------------------------
 
@@ -516,4 +521,3 @@ instance Transform BlurMany where
 --   render blurredSnowman 400 300 "blurred.png"
 
 blurredSnowman = apply (BlurMany 2) exampleSnowman
-
