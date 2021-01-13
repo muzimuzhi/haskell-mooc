@@ -1,0 +1,19 @@
+name: Test solutions
+on: [push]
+
+jobs:
+  runhaskell:
+    name: Test part1 solutions
+    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: haskell/actions/setup@v1
+        with:
+          ghc-version: '8.6.5' # Exact version of ghc to use
+          # cabal-version: 'latest'. Omitted, but defalts to 'latest'
+          enable-stack: true
+          stack-version: 'latest'
+          stack-setup-ghc: true
+      - run: |
+          cd exercises
+          stack runhaskell Set1Test.hs
