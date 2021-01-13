@@ -2,12 +2,11 @@ name: Test solutions
 on: [push]
 
 jobs:
-  runhaskell:
-    name: Test part1 solutions
+  setup:
+    # ref: https://github.com/haskell/actions/tree/main/setup
     runs-on: ubuntu-latest # or macOS-latest, or windows-latest
     steps:
       - uses: actions/checkout@v2
-      # - run: cd exercises
       - uses: haskell/actions/setup@v1
         with:
           ghc-version: '8.6.5' # Exact version of ghc to use
@@ -15,8 +14,14 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
           stack-setup-ghc: true
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cd exercises && stack build
+  test:
+    runs-on: ubuntu-latest
+    steps:
       - run: |
           echo $PWD
           cd exercises
-          stack build
           for file in `ls *Test.hs`; do echo "\n\nTest ${file/Test/}"; stack runhaskell $file; done
