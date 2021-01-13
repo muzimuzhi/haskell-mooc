@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest # or macOS-latest, or windows-latest
     steps:
       - uses: actions/checkout@v2
+      - run: cd exercises
       - uses: haskell/actions/setup@v1
         with:
           ghc-version: '8.6.5' # Exact version of ghc to use
@@ -14,6 +15,4 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
           stack-setup-ghc: true
-      - run: |
-          cd exercises
-          stack runhaskell Set1Test.hs
+      - run: stack runhaskell Set1Test.hs
