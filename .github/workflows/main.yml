@@ -15,13 +15,15 @@ jobs:
           stack-version: 'latest'
           stack-setup-ghc: true
   build:
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - run: cd exercises && stack build
   test:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - run: |
           echo $PWD
           cd exercises
-          for file in `ls *Test.hs`; do echo "\n\nTest ${file/Test/}"; stack runhaskell $file; done
+          for file in `ls *Test.hs`; do printf "\n\nTest ${file/Test/}\n"; stack runhaskell $file; done
