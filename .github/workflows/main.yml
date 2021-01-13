@@ -15,4 +15,4 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
           stack-setup-ghc: true
-      - run: stack runhaskell Set1Test.hs
+      - run: cd exercises && stack runhaskell Set1Test.hs
