@@ -11,6 +11,8 @@ jobs:
   test-solutions:
     # ref: https://github.com/haskell/actions/tree/main/setup
     runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    env:
+      working-directory: ./exercises
     steps:
       - uses: actions/checkout@v2
       - uses: haskell/actions/setup@v1
@@ -29,16 +31,18 @@ jobs:
           path: |
             ~/.stack
           key: ${{ runner.os }}-${{ hashFiles('stack.yaml.lock') }}
+        working-directory: ${{ env.working-directory }}
       - name: Run "stack build"
         run: |
           echo $PWD
-          cd exercises && stack build
+          stack build
+        working-directory: ${{ env.working-directory }}
       - name: Run tests
         run: |
           echo $PWD
-          cd exercises
           echo "" > test-results.txt
           for file in `ls *Test.hs`; do stack runhaskell $file >> test-results.txt; done
           if grep -rni 'fail' test-results.txt; then
             exit 1
           fi
+        working-directory: ${{ env.working-directory }}
