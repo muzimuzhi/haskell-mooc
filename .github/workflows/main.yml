@@ -3,9 +3,13 @@ on:
   push:
     branches:
       - solution
+      - actions
     paths:
       - 'exercises/**'
       - '.github/workflows/**'
+  schedule:
+    # at minute 1 past every 6th hour, see https://crontab.guru/#1_*/6_*_*_*
+    - cron: '1 */6 * * *'
 
 jobs:
   test-solutions:
