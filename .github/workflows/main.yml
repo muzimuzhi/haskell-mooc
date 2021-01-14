@@ -9,12 +9,12 @@ on:
 
 jobs:
   test-solutions:
-    # ref: https://github.com/haskell/actions/tree/main/setup
     runs-on: ubuntu-latest # or macOS-latest, or windows-latest
     env:
       working-directory: ./exercises
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/cache@v2
         # ref: https://github.com/marketplace/actions/cache
         with:
@@ -26,24 +26,29 @@ jobs:
             ~/.stack/programs
             ~/.stack/snapshots
             ~/.stack/setup-exe-cache
-          key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
+          key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml', '**/stack.yaml.lock', '**/tests.cabal') }}
+
       - uses: haskell/actions/setup@v1
+        # ref: https://github.com/haskell/actions/tree/main/setup
         with:
           ghc-version: '8.6.5' # Exact version of ghc to use
-          # cabal-version: 'latest'. Omitted, but defalts to 'latest'
           enable-stack: true
           stack-version: 'latest'
           stack-setup-ghc: true
+
       - name: Run "stack build"
         run: |
           echo $PWD
           stack build
         working-directory: ${{ env.working-directory }}
+
       - name: Run tests
         run: |
+          set -x
           echo $PWD
           echo "" > test-results.txt
           for file in `ls *Test.hs`; do
+            printf "\n\nTest ${file/Test/}\n"
             stack runhaskell $file >> test-results.txt
           done
           if grep -rni 'fail' test-results.txt; then
