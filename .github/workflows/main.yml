@@ -15,6 +15,18 @@ jobs:
       working-directory: ./exercises
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        # ref: https://github.com/marketplace/actions/cache
+        with:
+          # ref: config used by cosmia's gugugu
+          # https://bitbucket.org/Cosmius/gugugu/src/master/.azure-pipeline/config.yaml
+          path: |
+            ~/.stack/bin
+            ~/.stack/pantry
+            ~/.stack/programs
+            ~/.stack/snapshots
+            ~/.stack/setup-exe-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
       - uses: haskell/actions/setup@v1
         with:
           ghc-version: '8.6.5' # Exact version of ghc to use
@@ -22,15 +34,6 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
           stack-setup-ghc: true
-      - name: Cache
-        # ref: https://github.com/marketplace/actions/cache
-        uses: actions/cache@v2
-        with:
-          # ref: config used by cosmia's gugugu
-          # https://bitbucket.org/Cosmius/gugugu/src/master/.azure-pipeline/config.yaml
-          path: |
-            ~/.stack
-          key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
       - name: Run "stack build"
         run: |
           echo $PWD
@@ -40,8 +43,12 @@ jobs:
         run: |
           echo $PWD
           echo "" > test-results.txt
-          for file in `ls *Test.hs`; do stack runhaskell $file >> test-results.txt; done
+          for file in `ls *Test.hs`; do
+            stack runhaskell $file >> test-results.txt
+          done
           if grep -rni 'fail' test-results.txt; then
             exit 1
+          else
+            cat test-results.txt
           fi
         working-directory: ${{ env.working-directory }}
