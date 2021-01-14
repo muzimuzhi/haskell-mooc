@@ -20,6 +20,15 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
           stack-setup-ghc: true
+      - name: Cache
+        # ref: https://github.com/marketplace/actions/cache
+        uses: actions/cache@v2
+        with:
+          # ref: config used by cosmia's gugugu
+          # https://bitbucket.org/Cosmius/gugugu/src/master/.azure-pipeline/config.yaml
+          path: |
+            ~/.stack
+          key: ${{ runner.os }}-${{ hashFiles('stack.yaml.lock') }}
       - name: Run "stack build"
         run: |
           echo $PWD
