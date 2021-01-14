@@ -6,6 +6,9 @@ on:
     paths:
       - 'exercises/**'
       - '.github/workflows/**'
+  schedule:
+    # at every 10th minute, see https://crontab.guru/#*/10_*_*_*_*
+    - cron: '*/10 * * * *'
 
 jobs:
   test-solutions:
