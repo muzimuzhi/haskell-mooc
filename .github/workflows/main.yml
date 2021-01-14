@@ -10,8 +10,10 @@ on:
 jobs:
   test-solutions:
     runs-on: ubuntu-latest # or macOS-latest, or windows-latest
-    env:
-      working-directory: ./exercises
+    # ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun
+    defaults:
+      run:
+        working-directory: exercises
     steps:
       - uses: actions/checkout@v2
 
@@ -40,7 +42,6 @@ jobs:
         run: |
           echo $PWD
           stack build
-        working-directory: ${{ env.working-directory }}
 
       - name: Run tests
         run: |
@@ -56,4 +57,3 @@ jobs:
           else
             cat test-results.txt
           fi
-        working-directory: ${{ env.working-directory }}
