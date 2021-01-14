@@ -30,8 +30,7 @@ jobs:
           # https://bitbucket.org/Cosmius/gugugu/src/master/.azure-pipeline/config.yaml
           path: |
             ~/.stack
-          key: ${{ runner.os }}-${{ hashFiles('stack.yaml.lock') }}
-        working-directory: ${{ env.working-directory }}
+          key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
       - name: Run "stack build"
         run: |
           echo $PWD
