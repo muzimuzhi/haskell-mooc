@@ -1,0 +1,59 @@
+name: Test solutions
+on:
+  push:
+    branches:
+      - solution
+    paths:
+      - 'exercises/**'
+      - '.github/workflows/**'
+
+jobs:
+  test-solutions:
+    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    # ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun
+    defaults:
+      run:
+        working-directory: exercises
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        # ref: https://github.com/marketplace/actions/cache
+        with:
+          # ref: config used by cosmia's gugugu
+          # https://bitbucket.org/Cosmius/gugugu/src/master/.azure-pipeline/config.yaml
+          path: |
+            ~/.stack/bin
+            ~/.stack/pantry
+            ~/.stack/programs
+            ~/.stack/snapshots
+            ~/.stack/setup-exe-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml', '**/stack.yaml.lock', '**/tests.cabal') }}
+
+      - uses: haskell/actions/setup@v1
+        # ref: https://github.com/haskell/actions/tree/main/setup
+        with:
+          ghc-version: '8.6.5' # Exact version of ghc to use
+          enable-stack: true
+          stack-version: 'latest'
+          stack-setup-ghc: true
+
+      - name: Run "stack build"
+        run: |
+          echo $PWD
+          stack build
+
+      - name: Run tests
+        run: |
+          set -x
+          echo $PWD
+          echo "" > test-results.txt
+          for file in `ls *Test.hs`; do
+            printf "\n\nTest ${file/Test/}\n"
+            stack runhaskell $file >> test-results.txt
+          done
+          if grep -rni 'fail' test-results.txt; then
+            exit 1
+          else
+            cat test-results.txt
+          fi
