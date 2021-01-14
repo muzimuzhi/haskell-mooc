@@ -28,4 +28,8 @@ jobs:
         run: |
           echo $PWD
           cd exercises
-          for file in `ls *Test.hs`; do printf "\n\nTest ${file/Test/}\n"; stack runhaskell $file; done
+          echo "" > test-results.txt
+          for file in `ls *Test.hs`; do stack runhaskell $file >> test-results.txt; done
+          if grep -rni 'fail' test-results.txt; then
+            exit 1
+          fi
