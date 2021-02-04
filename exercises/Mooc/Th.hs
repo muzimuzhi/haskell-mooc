@@ -1,9 +1,9 @@
 {-# LANGUAGE TemplateHaskell, DeriveLift, StandaloneDeriving #-}
 
 module Mooc.Th (testing, testing', timeLimit,
-                isDefined, withDefined, hasType, importsOnly, show',
+                isDefined, withDefined, hasType, hasType', importsOnly, show',
                 reifyType, DataType(..), FieldType(..), Constructor(..),
-                withInstance, withInstance1, classContains, defineInstance)
+                withInstance, withInstance1, withInstances1, classContains, defineInstance)
 where
 
 import Data.Char
@@ -60,6 +60,15 @@ hasType s qtyp = do
     then [|\k -> counterexample s (k $(varOrCon $ mkName s))|]
     else [|\k -> counterexample ("The type of '"++s++"'\n  Expected: "++expected++"\n  Was: "++actual) False|]
 
+hasType' :: String -> String -> Q Exp
+hasType' s expected = do
+  mt <- getType s
+  let actual = case mt of Nothing -> "nothing"
+                          Just t -> showType t
+  if (actual==expected)
+    then [|\k -> counterexample s (k $(varOrCon $ mkName s))|]
+    else [|\k -> counterexample ("The type of '"++s++"'\n  Expected: "++expected++"\n  Was: "++actual) False|]
+
 -- testing types
 
 data FieldType = SimpleType String | WeirdType
@@ -112,17 +121,29 @@ constructorName' c = case c of
 
 -- testing classes
 
-withInstance :: String -> String -> Q Exp -> Q Exp
-withInstance cln typn val = do
+data Instance = Found | NotFound String String | NoClass String | NoType String
+  deriving (Show, Eq)
+
+lookupInstance :: String -> String -> Q Instance
+lookupInstance cln typn = do
   cl <- lookupTypeName cln
   typ <- lookupTypeName typn
   case (cl,typ) of
-    (Nothing,_) -> [|\k -> counterexample ("Class "++cln++" not found") (property False)|]
-    (_,Nothing) -> [|\k -> counterexample ("Type "++typn++" not found") (property False)|]
+    (Nothing,_) -> return $ NoClass cln
+    (_,Nothing) -> return $ NoType typn
     (Just c, Just t) -> do b <- isInstance c [(ConT t)]
                            if b
-                             then [|\k -> k $val|]
-                             else [|\k -> counterexample ("Type "++typn++" is not an instance of class "++cln) (property False)|]
+                             then return Found
+                             else return $ NotFound cln typn
+
+withInstance :: String -> String -> Q Exp -> Q Exp
+withInstance cln typn val = do
+  ins <- lookupInstance cln typn
+  case ins of
+    NoClass cln -> [|\k -> counterexample ("Class "++cln++" not found") (property False)|]
+    NoType typn -> [|\k -> counterexample ("Type "++typn++" not found") (property False)|]
+    NotFound cln typn -> [|\k -> counterexample ("Type "++typn++" is not an instance of class "++cln) (property False)|]
+    Found -> [|\k -> k $val|]
 
 classContains :: String -> String -> Q Exp
 classContains cln varn = do
@@ -132,24 +153,42 @@ classContains cln varn = do
     Just cl -> do
       info <- reify cl
       case info of
-        (ClassOpI _ _ parent) -> let pn = nameBase parent in [|counterexample ("Function "++varn++ "is in the wrong class!") (pn ?== cln)|]
+        (ClassOpI _ _ parent) -> let pn = nameBase parent in [|counterexample ("Function "++varn++" is in the wrong class!") (pn ?== cln)|]
         _ -> [|counterexample ("Function "++varn++" is not a method of class "++cln) (property False)|]
 
 lookupConstructor :: String -> Q (Maybe Type)
 lookupConstructor "[]" = return (Just ListT)
 lookupConstructor x = (fmap.fmap) ConT $ lookupTypeName x
 
-withInstance1 :: String -> String -> Q Exp -> Q Exp
-withInstance1 cln typn val = do
+lookupInstance1 :: String -> String -> Q Instance
+lookupInstance1 cln typn = do
   cl <- lookupTypeName cln
   cons <- lookupConstructor typn
   case (cl,cons) of
-    (Nothing,_) -> [|\k -> counterexample ("Class "++cln++" not found") (property False)|]
-    (_,Nothing) -> [|\k -> counterexample ("Type "++typn++" not found") (property False)|]
-    (Just c, Just t) -> do b <- isInstance c [(AppT t (VarT (mkName "a")))]
+    (Nothing,_) -> return $ NoClass cln
+    (_,Nothing) -> return $ NoType typn
+    (Just c, Just t) -> do b <- isInstance c [AppT t (VarT (mkName "a"))]
                            if b
-                             then [|\k -> k $val|]
-                             else [|\k -> counterexample ("Type "++typn++" is not an instance of class "++cln) (property False)|]
+                             then return Found
+                             else return $ NotFound cln typn
+
+withInstance1 :: String -> String -> Q Exp -> Q Exp
+withInstance1 cln typn val = do
+  ins <- lookupInstance1 cln typn
+  case ins of
+    NoClass cln -> [|\k -> counterexample ("Class "++cln++" not found") (property False)|]
+    NoType typn -> [|\k -> counterexample ("Type "++typn++" not found") (property False)|]
+    NotFound cln typn -> [|\k -> counterexample ("Type "++typn++" is not an instance of class "++cln) (property False)|]
+    Found -> [|\k -> k $val|]
+
+withInstances1 :: String -> [String] -> Q Exp -> Q Exp
+withInstances1 cln typns val = do
+  instances <- mapM (lookupInstance1 cln) typns
+  case filter (/=Found) instances of
+    (NoClass cln:_) -> [|\k -> counterexample ("Class "++cln++" not found") (property False)|]
+    (NoType typn:_) -> [|\k -> counterexample ("Type "++typn++" not found") (property False)|]
+    (NotFound cln typn:_) -> [|\k -> counterexample ("Type "++typn++" is not an instance of class "++cln) (property False)|]
+    _ -> [|\k -> k $val|]
 
 defineInstance :: String -> Name -> String -> Q Exp -> Q [Dec]
 defineInstance cln typn methodn body = do
